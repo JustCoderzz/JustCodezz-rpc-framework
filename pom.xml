@@ -13,6 +13,7 @@
         <module>example-rpc-netty</module>
         <module>learning-rpc-netty</module>
         <module>learning-rpc-curator</module>
+        <module>rpc-framework-core</module>
     </modules>
 
     <properties>
