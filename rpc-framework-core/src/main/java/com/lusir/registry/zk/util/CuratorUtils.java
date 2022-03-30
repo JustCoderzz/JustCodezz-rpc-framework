@@ -6,9 +6,14 @@ import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.CreateMode;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -22,6 +27,7 @@ public class CuratorUtils {
 
     public static final String ZK_REGISTER_ROOT_PATH = "/lusir-rpc";
     private static final Set<String> REGISTERED_PATH_SET= ConcurrentHashMap.newKeySet();
+    private static  final Map<String,List<String>> SERVICE_ADDRESS_MAP = new ConcurrentHashMap<>();
     private static CuratorFramework zkClient;
     private static final String DEFAULT_ZOOKEEPER_ADDRESS = "127.0.0.1:2181";
     private static final int BASE_SLEEP_TIME = 1000;
@@ -66,6 +72,37 @@ public class CuratorUtils {
             e.printStackTrace();
         }
         return zkClient;
+
+    }
+
+    public static List<String> getChildrenNodes(CuratorFramework zkClient,String rpcServiceName) {
+        if (SERVICE_ADDRESS_MAP.containsKey(rpcServiceName)){
+            return  SERVICE_ADDRESS_MAP.get(rpcServiceName);
+        }
+        List<String> serviceList=null;
+        String servicePath=ZK_REGISTER_ROOT_PATH+"/"+rpcServiceName;
+        try {
+             serviceList = zkClient.getChildren().forPath(servicePath);
+            SERVICE_ADDRESS_MAP.put(rpcServiceName,serviceList);
+            registerWatcher(rpcServiceName,zkClient);
+        }catch (Exception e) {
+            log.error("get children nodes for path [{}] fail", servicePath);
+        }
+        return serviceList;
+    }
+
+    public static void registerWatcher(String rpcServiceName,CuratorFramework zkClient) throws Exception {
+        String root=ZK_REGISTER_ROOT_PATH+"/"+rpcServiceName;
+        PathChildrenCache pathChildrenCache=new PathChildrenCache(zkClient,root,true);
+        PathChildrenCacheListener pathChildrenCacheListener=new PathChildrenCacheListener() {
+            @Override
+            public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent) throws Exception {
+                List<String> serviceList = curatorFramework.getChildren().forPath(root);
+                SERVICE_ADDRESS_MAP.put(rpcServiceName,serviceList);
+            }
+        };
+        pathChildrenCache.getListenable().addListener(pathChildrenCacheListener);
+        pathChildrenCache.start();
 
     }
 }

@@ -1,6 +1,12 @@
 package com.lusir.remoting.transport.netty.client;
 
+import com.lusir.enums.CompressTypeEnum;
+import com.lusir.enums.SerializationTypeEnum;
+import com.lusir.extension.ExtensionLoader;
 import com.lusir.factory.SingletonFactory;
+import com.lusir.registry.ServiceDiscovery;
+import com.lusir.remoting.constants.RpcConstants;
+import com.lusir.remoting.dto.RpcMessage;
 import com.lusir.remoting.dto.RpcRequest;
 import com.lusir.remoting.dto.RpcResponse;
 import com.lusir.remoting.transport.RpcRequestTransport;
@@ -29,6 +35,7 @@ public class NettyClient implements RpcRequestTransport {
     private  final Bootstrap bootstrap;
     private  final EventLoopGroup worker;
     private final  UnprocessedRequests unprocessedRequests;
+    private  final ServiceDiscovery serviceDiscovery;
 
 
     public  NettyClient() {
@@ -49,7 +56,7 @@ public class NettyClient implements RpcRequestTransport {
                         p.addLast(new NettyClientHandler());
                     }
                 });
-
+        serviceDiscovery= ExtensionLoader.getExtensionLoader(ServiceDiscovery.class).getExtension("zk");
         unprocessedRequests=SingletonFactory.getInstance(UnprocessedRequests.class);
         channelProvider =SingletonFactory.getInstance(ChannelProvider.class);
 
@@ -75,6 +82,30 @@ public class NettyClient implements RpcRequestTransport {
     @Override
     public Object sendRpcRequest(RpcRequest rpcRequest) {
         CompletableFuture<RpcResponse<Object>> future=new CompletableFuture<>();
+        InetSocketAddress inetSocketAddress = serviceDiscovery.lookupService(rpcRequest);
+        Channel channel = getChannel(inetSocketAddress);
+        if (channel.isActive()) {
+            unprocessedRequests.put(rpcRequest.getQuestId(),future);
+            RpcMessage rpcMessage = RpcMessage.builder().data(rpcRequest)
+                    .codec(SerializationTypeEnum.KYRO.getCode())
+                    .compress(CompressTypeEnum.GZIP.getCode())
+                    .messageType(RpcConstants.REQUEST_TYPE).build();
+            channel.writeAndFlush(rpcMessage).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture channelFuture) throws Exception {
+                        if (channelFuture.isSuccess()){
+                            log.info("client send message: [{}]", rpcMessage);
+                        }else {
+                            channelFuture.channel().closeFuture().sync();
+                            future.completeExceptionally(channelFuture.cause());
+                            log.error("Send failed:", channelFuture.cause());
+                        }
+                }
+            });
+        }else{
+            throw new IllegalStateException();
+        }
+        return future;
     }
 
 

@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -26,8 +27,10 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
         ConsistentHashSelector consistentHashSelector = selectors.get(rpcServiceName);
 
         if (consistentHashSelector==null||consistentHashSelector.identityHashCode!=identityHashCode) {
-            selectors.put()
+            selectors.put(rpcServiceName,new ConsistentHashSelector(serviceUrlList, 160,identityHashCode));
+           consistentHashSelector= selectors.get(rpcServiceName);
         }
+      return   consistentHashSelector.select(rpcServiceName+ Arrays.stream(rpcRequest.getParameters()));
     }
 
     static class ConsistentHashSelector {
