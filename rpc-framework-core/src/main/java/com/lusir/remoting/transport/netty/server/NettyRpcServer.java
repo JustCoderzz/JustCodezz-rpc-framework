@@ -16,6 +16,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +26,7 @@ import java.util.concurrent.TimeUnit;
  * @date 2022/3/29 - 18:45
  **/
 @Slf4j
+@Component
 public class NettyRpcServer {
     public   final static  int port=8888;
 

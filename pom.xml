@@ -15,6 +15,9 @@
         <module>learning-rpc-curator</module>
         <module>rpc-framework-core</module>
         <module>rpc-framework-common</module>
+        <module>rpc-framework-api</module>
+        <module>rpc-example-client</module>
+        <module>rpc-example-server</module>
     </modules>
 
     <properties>

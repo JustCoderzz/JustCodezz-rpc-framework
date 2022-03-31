@@ -1,8 +1,6 @@
 package com.lusir.remoting.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -12,6 +10,8 @@ import java.util.UUID;
  * @date 2022/3/29 - 11:17
  **/
 @Getter
+@Builder
+@Setter
 public class RpcRequest implements Serializable {
     private static  final  long serialVersionUID= -2501020588965315545L;
     private String questId;
